@@ -43,16 +43,28 @@ const router = express.Router();
  *         description: Erreur serveur lors de l'enregistrement de l'utilisateur
  */
 router.post("/signup", (req, res) => {
-  bcrypt.hash(req.body.password, 10).then((hash) => {
-    const user = new User({
-      email: req.body.email,
-      password: hash,
-    });
-    user
-      .save()
-      .then(() => res.status(201).json({ message: "User created!" }))
-      .catch((error) => res.status(400).json({ error }));
-  });
+  // Rechercher si l'email existe déjà dans la base de données
+  User.findOne({ email: req.body.email })
+    .then((existingUser) => {
+      if (existingUser) {
+        // Si un utilisateur avec cet email existe déjà, renvoyer une erreur
+        return res.status(400).json({ message: "Email already in use!" });
+      }
+
+      // Si l'email est unique, continuer avec le hashage du mot de passe
+      bcrypt.hash(req.body.password, 10).then((hash) => {
+        const user = new User({
+          email: req.body.email,
+          password: hash,
+        });
+
+        user
+          .save()
+          .then(() => res.status(201).json({ message: "User created!" }))
+          .catch((error) => res.status(400).json({ error }));
+      });
+    })
+    .catch((error) => res.status(500).json({ error: "Server error" }));
 });
 
 /**
